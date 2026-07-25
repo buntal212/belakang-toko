@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm database/migrations/2026_05_19_125134_create_personal_access_tokens_table.php)"
+    ],
+    "additionalDirectories": [
+      "F:\\buntal\\minimareket\\belakang-toko\\database\\migrations"
+    ]
+  }
+}
