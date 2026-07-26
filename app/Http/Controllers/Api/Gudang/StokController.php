@@ -14,11 +14,13 @@ class StokController extends Controller
     public function produkTersedia(Request $request): JsonResponse
     {
         $search = trim((string) $request->input('search'));
+        $barcode = trim((string) $request->input('barcode'));
 
         $data = Barang::query()
             ->select([
                 'mbarang.id',
                 'mbarang.kodebarang',
+                'mbarang.kodebarcode',
                 'mbarang.namabarang',
                 'mbarang.jenisbarang',
                 'mbarang.merk',
@@ -32,9 +34,11 @@ class StokController extends Controller
             ->selectRaw('COALESCE(SUM(stok.qty_tersedia), 0) as stok_tersedia')
             ->join('stok', 'stok.barang_id', '=', 'mbarang.id')
             ->where('stok.qty_tersedia', '>', 0)
+            ->when($barcode, fn ($query) => $query->where('mbarang.kodebarcode', $barcode))
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('mbarang.kodebarang', 'like', "%{$search}%")
+                        ->orWhere('mbarang.kodebarcode', 'like', "%{$search}%")
                         ->orWhere('mbarang.namabarang', 'like', "%{$search}%")
                         ->orWhere('mbarang.jenisbarang', 'like', "%{$search}%")
                         ->orWhere('mbarang.merk', 'like', "%{$search}%");
@@ -43,6 +47,7 @@ class StokController extends Controller
             ->groupBy([
                 'mbarang.id',
                 'mbarang.kodebarang',
+                'mbarang.kodebarcode',
                 'mbarang.namabarang',
                 'mbarang.jenisbarang',
                 'mbarang.merk',

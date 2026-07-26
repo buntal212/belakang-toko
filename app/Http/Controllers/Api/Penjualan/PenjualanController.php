@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Penjualan;
 
 use App\Http\Controllers\Controller;
 use App\Models\Master\Barang;
+use App\Models\Master\Pelanggan;
 use App\Models\Penjualan\Penjualan;
 use App\Services\Stok\StokFifoService;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +19,7 @@ class PenjualanController extends Controller
     {
         $search = trim((string) $request->input('search'));
         $data = Penjualan::query()
-            ->with('pengguna:id,name')
+            ->with(['pengguna:id,name', 'pelanggan:id,nama,telepon'])
             ->withCount('rincian')
             ->when($request->boolean('retur_eligible'), fn ($query) =>
                 $query->where('tanggal', '>=', now()->subDays(3))
@@ -43,6 +44,7 @@ class PenjualanController extends Controller
     {
         return new JsonResponse(['data' => Penjualan::with([
             'pengguna:id,name',
+            'pelanggan:id,nama,telepon',
             'rincian.barang:id,kodebarang,namabarang',
         ])->findOrFail($id)]);
     }
@@ -50,8 +52,9 @@ class PenjualanController extends Controller
     public function store(Request $request, StokFifoService $stokService): JsonResponse
     {
         $data = $request->validate([
-            'cara_bayar' => ['required', Rule::in(['CASH', 'DEBIT', 'QRIS'])],
+            'cara_bayar' => ['required', Rule::in(['CASH', 'DEBIT', 'QRIS', 'HUTANG'])],
             'dibayar' => ['required', 'numeric', 'min:0'],
+            'pelanggan_id' => ['nullable', 'integer', 'required_if:cara_bayar,HUTANG', 'exists:mpelanggan,id'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.barang_id' => ['required', 'integer', 'exists:mbarang,id'],
             'items.*.qty' => ['required', 'numeric', 'gt:0'],
@@ -59,9 +62,20 @@ class PenjualanController extends Controller
         ]);
 
         $penjualan = DB::transaction(function () use ($data, $request, $stokService) {
+            $pelangganId = $data['pelanggan_id'] ?? null;
+            if ($data['cara_bayar'] === 'HUTANG') {
+                $pelanggan = Pelanggan::query()->lockForUpdate()->findOrFail($pelangganId);
+                if ((int) $pelanggan->flaging === 1) {
+                    throw ValidationException::withMessages([
+                        'pelanggan_id' => 'Pelanggan yang dipilih sudah tidak aktif',
+                    ]);
+                }
+            }
+
             $penjualan = Penjualan::create([
                 'nomortransaksi' => $this->nextNumber(),
                 'tanggal' => now(),
+                'pelanggan_id' => $data['cara_bayar'] === 'HUTANG' ? $pelangganId : null,
                 'cara_bayar' => $data['cara_bayar'],
                 'created_by' => $request->user()->id,
             ]);
@@ -113,8 +127,11 @@ class PenjualanController extends Controller
                 $totalHpp += $fifo['nilai'];
             }
 
-            $dibayar = $data['cara_bayar'] === 'CASH' ? (float) $data['dibayar'] : $subtotal;
-            if ($dibayar < $subtotal) {
+            $hutang = $data['cara_bayar'] === 'HUTANG';
+            $dibayar = $hutang
+                ? 0
+                : ($data['cara_bayar'] === 'CASH' ? (float) $data['dibayar'] : $subtotal);
+            if (!$hutang && $dibayar < $subtotal) {
                 throw ValidationException::withMessages(['dibayar' => 'Jumlah pembayaran kurang dari total transaksi']);
             }
             $penjualan->update([
@@ -122,9 +139,10 @@ class PenjualanController extends Controller
                 'subtotal' => $subtotal,
                 'grandtotal' => $subtotal,
                 'dibayar' => $dibayar,
-                'kembalian' => $dibayar - $subtotal,
+                'kembalian' => $hutang ? 0 : $dibayar - $subtotal,
+                'sisa_hutang' => $hutang ? $subtotal : 0,
                 'hpp' => $totalHpp,
-                'status' => 'SELESAI',
+                'status' => $hutang ? 'HUTANG' : 'SELESAI',
             ]);
             return $penjualan;
         });
@@ -133,6 +151,7 @@ class PenjualanController extends Controller
             'message' => 'Penjualan berhasil disimpan',
             'data' => $penjualan->load([
                 'pengguna:id,name',
+                'pelanggan:id,nama,telepon',
                 'rincian.barang:id,kodebarang,namabarang',
             ]),
         ], 201);

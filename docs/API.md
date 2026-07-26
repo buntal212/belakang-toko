@@ -263,15 +263,18 @@ Payload penyimpanan:
 
 ```json
 {
-  "cara_bayar": "CASH",
-  "dibayar": 50000,
+  "cara_bayar": "HUTANG",
+  "dibayar": 0,
+  "pelanggan_id": 1,
   "items": [
     { "barang_id": 1, "qty": 3 }
   ]
 }
 ```
 
-`cara_bayar` menerima `CASH`, `DEBIT`, atau `QRIS`. Harga jual selalu diambil ulang
+`cara_bayar` menerima `CASH`, `DEBIT`, `QRIS`, atau `HUTANG`. Pelanggan wajib dipilih
+untuk pembayaran hutang. Transaksi hutang menyimpan `dibayar` dan `kembalian` sebagai
+nol serta mencatat seluruh nilai transaksi pada `sisa_hutang`. Harga jual selalu diambil ulang
 dari master barang oleh server. Penyimpanan header, rincian, dan pengeluaran lot FIFO
 dijalankan dalam satu transaksi database. Jika stok salah satu barang tidak cukup,
 seluruh transaksi dibatalkan dan tidak ada stok yang berubah.
@@ -310,6 +313,23 @@ mencatat mutasi `KELUAR` dengan sumber `RETUR_PEMBELIAN`. Seluruh header, rincia
 saldo stok, nilai stok, dan mutasi disimpan dalam satu transaksi database.
 Penghapusan retur pembelian mengembalikan kuantitas ke lot asal dan menghapus mutasi
 `RETUR_PEMBELIAN`.
+
+## Kartu stok
+
+`GET /laporan/kartu-stok?barang_id=1&tanggal_awal=2026-07-01&tanggal_akhir=2026-07-31&page=1&per_page=25`
+
+Parameter `barang_id` wajib diisi. Laporan mengembalikan identitas barang, mutasi
+secara kronologis, dan ringkasan:
+
+- saldo awal sebelum periode;
+- total masuk dan keluar dalam periode;
+- saldo akhir periode;
+- saldo persediaan saat ini.
+
+Field `saldo_kartu` pada setiap baris dihitung lintas seluruh lot FIFO untuk kode
+barang yang sama. Karena itu saldo kartu stok tidak menggunakan `saldo_sesudah` lot
+secara langsung. Data mutasi menyertakan lot, sumber transaksi, nomor referensi,
+kuantitas masuk/keluar, harga per unit, nilai mutasi, keterangan, serta pengguna.
 
 ## Status HTTP
 

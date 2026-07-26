@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Master\Barang;
+use App\Models\Master\Pelanggan;
 use App\Models\Master\Supplier;
 use App\Models\User;
 use App\Services\Stok\StokFifoService;
@@ -439,4 +440,85 @@ it('meretur pembelian hanya dari penerimaan yang sudah masuk stok dan tidak mele
         'sumber_tipe' => 'RETUR_PEMBELIAN',
         'sumber_id' => $returId,
     ]);
+});
+
+it('mencari produk lewat barcode dan menyimpan penjualan hutang dengan pelanggan', function () {
+    $supplier = Supplier::create(['nama' => 'SUPPLIER HUTANG']);
+    $pelanggan = Pelanggan::create([
+        'nama' => 'PELANGGAN HUTANG',
+        'telepon' => '08123456789',
+    ]);
+    $barang = Barang::create([
+        'kodebarang' => 'BRG-HUTANG',
+        'kodebarcode' => '899999000001',
+        'namabarang' => 'BARANG HUTANG',
+        'satuanbesar' => 'DUS',
+        'satuankecil' => 'PCS',
+        'isisatuan' => 10,
+        'hargajual_satuankecil' => 15000,
+        'hargajual_satuanbesar' => 140000,
+    ]);
+
+    $penerimaanId = $this->postJson('/api/v1/gudang/penerimaan/simpan', [
+        'tanggal' => now()->toDateString(),
+        'supplier_id' => $supplier->id,
+        'cara_bayar' => 'CASH',
+        'rincian' => [[
+            'barang_id' => $barang->id,
+            'qtybesar' => 1,
+            'isi' => 10,
+            'hargabeli' => 100000,
+        ]],
+    ])->assertOk()->json('data.id');
+    $this->postJson("/api/v1/gudang/penerimaan/kirim-stok/{$penerimaanId}")->assertOk();
+
+    $this->getJson('/api/v1/gudang/stok/produk-tersedia?barcode=899999000001')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $barang->id)
+        ->assertJsonPath('data.0.kodebarcode', '899999000001');
+
+    $response = $this->postJson('/api/v1/penjualan/simpan', [
+        'cara_bayar' => 'HUTANG',
+        'dibayar' => 0,
+        'pelanggan_id' => $pelanggan->id,
+        'items' => [[
+            'barang_id' => $barang->id,
+            'qty' => 2,
+            'jenis_satuan' => 'KECIL',
+        ]],
+    ])->assertCreated()
+        ->assertJsonPath('data.cara_bayar', 'HUTANG')
+        ->assertJsonPath('data.status', 'HUTANG')
+        ->assertJsonPath('data.pelanggan.id', $pelanggan->id)
+        ->assertJsonPath('data.dibayar', '0.00')
+        ->assertJsonPath('data.kembalian', '0.00')
+        ->assertJsonPath('data.sisa_hutang', '30000.00');
+
+    $this->assertDatabaseHas('tpenjualan', [
+        'id' => $response->json('data.id'),
+        'pelanggan_id' => $pelanggan->id,
+        'cara_bayar' => 'HUTANG',
+        'status' => 'HUTANG',
+        'sisa_hutang' => 30000,
+    ]);
+    $this->assertDatabaseHas('stok', ['barang_id' => $barang->id, 'qty_tersedia' => 8]);
+
+    $this->getJson('/api/v1/laporan/kartu-stok?barang_id='.$barang->id)
+        ->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('barang.kodebarang', 'BRG-HUTANG')
+        ->assertJsonPath('ringkasan.saldo_awal', 0)
+        ->assertJsonPath('ringkasan.total_masuk', 10)
+        ->assertJsonPath('ringkasan.total_keluar', 2)
+        ->assertJsonPath('ringkasan.saldo_akhir', 8)
+        ->assertJsonPath('ringkasan.saldo_sekarang', 8)
+        ->assertJsonPath('data.0.saldo_kartu', 10)
+        ->assertJsonPath('data.1.saldo_kartu', 8);
+});
+
+it('mewajibkan kode barang pada kartu stok', function () {
+    $this->getJson('/api/v1/laporan/kartu-stok')
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('barang_id');
 });

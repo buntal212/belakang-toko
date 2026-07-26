@@ -3,6 +3,7 @@
 namespace App\Models\Stok;
 
 use App\Models\Master\Barang;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class StokMutasi extends Model
@@ -22,4 +23,5 @@ class StokMutasi extends Model
 
     public function stok() { return $this->belongsTo(Stok::class); }
     public function barang() { return $this->belongsTo(Barang::class); }
+    public function pengguna() { return $this->belongsTo(User::class, 'created_by'); }
 }
