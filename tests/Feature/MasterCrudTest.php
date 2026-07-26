@@ -2,6 +2,7 @@
 
 use App\Models\Master\Barang;
 use App\Models\Master\Merk;
+use App\Models\Master\Pelanggan;
 use App\Models\Master\Satuan;
 use App\Models\Master\Supplier;
 use App\Models\User;
@@ -84,4 +85,34 @@ it('menjalankan CRUD barang', function () {
 
     $this->postJson('/api/v1/master/barang/hapus', ['id' => $id])->assertOk();
     expect(Barang::find($id)->flaging)->toBe(1);
+});
+
+it('menjalankan CRUD pelanggan', function () {
+    $id = $this->postJson('/api/v1/master/pelanggan/simpan', [
+        'nama' => 'Budi Santoso',
+        'alamat' => 'Jalan Merdeka',
+        'telepon' => '08123456789',
+        'email' => 'BUDI@EXAMPLE.COM',
+    ])->assertOk()
+        ->assertJsonPath('data.nama', 'BUDI SANTOSO')
+        ->assertJsonPath('data.alamat', 'JALAN MERDEKA')
+        ->assertJsonPath('data.email', 'budi@example.com')
+        ->json('data.id');
+
+    $this->getJson('/api/v1/master/pelanggan/get-data?search=08123456789')
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $id);
+
+    $this->postJson('/api/v1/master/pelanggan/simpan', [
+        'id' => $id,
+        'nama' => 'Budi Baru',
+        'email' => 'baru@example.com',
+    ])->assertOk()
+        ->assertJsonPath('data.nama', 'BUDI BARU');
+
+    $this->getJson("/api/v1/master/pelanggan/detail/{$id}")
+        ->assertOk()->assertJsonPath('data.id', $id);
+
+    $this->deleteJson("/api/v1/master/pelanggan/hapus/{$id}")->assertOk();
+    expect(Pelanggan::find($id)->flaging)->toBe(1);
 });

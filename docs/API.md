@@ -148,6 +148,25 @@ Untuk menghapus barang:
 }
 ```
 
+## Master pelanggan
+
+- `GET /master/pelanggan/get-data?search=&page=1&per_page=12`
+- `GET /master/pelanggan/detail/{id}`
+- `POST /master/pelanggan/simpan`
+- `DELETE /master/pelanggan/hapus/{id}`
+
+Body tambah/edit:
+
+```json
+{
+  "id": null,
+  "nama": "Budi Santoso",
+  "alamat": "Jalan Merdeka",
+  "telepon": "08123456789",
+  "email": "budi@example.com"
+}
+```
+
 ## Gudang penerimaan
 
 - `GET /gudang/penerimaan/get-data`
