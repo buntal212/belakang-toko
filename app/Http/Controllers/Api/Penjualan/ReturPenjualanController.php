@@ -53,6 +53,11 @@ class ReturPenjualanController extends Controller
             'pengguna:id,name',
             'rincian.barang:id,kodebarang,namabarang',
         ])->findOrFail($id);
+        if ($penjualan->setoran_bendahara_id !== null) {
+            throw ValidationException::withMessages([
+                'penjualan' => 'Transaksi sudah disetor ke bendahara dan tidak dapat diretur',
+            ]);
+        }
         if ($penjualan->tanggal->lt(now()->subDays(3))) {
             throw ValidationException::withMessages([
                 'penjualan' => 'Transaksi sudah melewati batas retur 3 hari',

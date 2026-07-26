@@ -106,12 +106,15 @@ class PenerimaanController extends Controller
 
             $dasarPajak = max($subtotal - $totalDiskon, 0);
             $pajak = $dasarPajak * ((float) ($data['pajakpersen'] ?? 0) / 100);
+            $grandTotal = $dasarPajak + $pajak;
             $penerimaan->update([
                 'jumlahitem' => $jumlahItem,
                 'subtotal' => $subtotal,
                 'diskon' => $totalDiskon,
                 'pajak' => $pajak,
-                'grandtotal' => $dasarPajak + $pajak,
+                'grandtotal' => $grandTotal,
+                'dibayar' => $data['cara_bayar'] === 'HUTANG' ? 0 : $grandTotal,
+                'sisa_hutang' => $data['cara_bayar'] === 'HUTANG' ? $grandTotal : 0,
             ]);
 
             return $penerimaan;

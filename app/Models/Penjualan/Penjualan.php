@@ -25,4 +25,6 @@ class Penjualan extends Model
     public function rincian() { return $this->hasMany(PenjualanRinci::class); }
     public function pengguna() { return $this->belongsTo(User::class, 'created_by'); }
     public function pelanggan() { return $this->belongsTo(Pelanggan::class); }
+    public function setoranBendahara() { return $this->belongsTo(SetoranBendahara::class); }
+    public function retur() { return $this->hasMany(ReturPenjualan::class); }
 }

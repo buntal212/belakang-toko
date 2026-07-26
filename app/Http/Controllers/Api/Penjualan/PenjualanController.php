@@ -23,6 +23,7 @@ class PenjualanController extends Controller
             ->withCount('rincian')
             ->when($request->boolean('retur_eligible'), fn ($query) =>
                 $query->where('tanggal', '>=', now()->subDays(3))
+                    ->whereNull('setoran_bendahara_id')
             )
             ->when($search, fn ($query) => $query->where('nomortransaksi', 'like', "%{$search}%"))
             ->when($request->cara_bayar, fn ($query, $value) => $query->where('cara_bayar', $value))

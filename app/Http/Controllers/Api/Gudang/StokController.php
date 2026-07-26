@@ -70,7 +70,7 @@ class StokController extends Controller
 
         $data = Stok::query()
             ->with([
-                'barang:id,kodebarang,namabarang,jenisbarang,merk,keterangan,satuanbesar,satuankecil',
+                'barang:id,kodebarang,namabarang,jenisbarang,merk,keterangan,satuanbesar,satuankecil,isisatuan',
                 'supplier:id,nama',
                 'penerimaan:id,nomortransaksi,nomorfaktur',
             ])
@@ -139,7 +139,7 @@ class StokController extends Controller
     public function show(int $id): JsonResponse
     {
         $stok = Stok::with([
-            'barang:id,kodebarang,namabarang,jenisbarang,merk,keterangan,satuanbesar,satuankecil',
+            'barang:id,kodebarang,namabarang,jenisbarang,merk,keterangan,satuanbesar,satuankecil,isisatuan',
             'supplier:id,nama',
             'penerimaan:id,nomortransaksi,nomorfaktur,tanggal',
             'mutasi' => fn ($query) => $query->latest('tanggal_mutasi')->latest('id'),

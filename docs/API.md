@@ -314,6 +314,29 @@ saldo stok, nilai stok, dan mutasi disimpan dalam satu transaksi database.
 Penghapusan retur pembelian mengembalikan kuantitas ke lot asal dan menghapus mutasi
 `RETUR_PEMBELIAN`.
 
+## Setor ke bendahara
+
+- `GET /penjualan/setoran-bendahara/preview`
+- `GET /penjualan/setoran-bendahara/get-data`
+- `GET /penjualan/setoran-bendahara/detail/{id}`
+- `POST /penjualan/setoran-bendahara/simpan`
+
+Preview menghitung transaksi `CASH` milik kasir yang sedang login sejak awal hari
+atau sejak setoran terakhir pada hari yang sama. Retur dengan metode pengembalian
+`CASH` pada periode tersebut menjadi pengurang.
+
+```json
+{
+  "nominal_disetor": 79000,
+  "catatan": "Selisih kurang seribu"
+}
+```
+
+Setoran menyimpan periode, jumlah transaksi, penjualan tunai, retur tunai, nilai yang
+seharusnya disetor, nominal aktual, serta selisih. Selisih negatif berarti kurang dan
+selisih positif berarti lebih. Setiap penyimpanan menghitung ulang nilai sistem di
+dalam transaksi database agar transaksi yang sama tidak masuk ke dua setoran.
+
 ## Kartu stok
 
 `GET /laporan/kartu-stok?barang_id=1&tanggal_awal=2026-07-01&tanggal_akhir=2026-07-31&page=1&per_page=25`

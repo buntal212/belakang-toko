@@ -14,6 +14,7 @@ class Penerimaan extends Model
         'tanggal' => 'date:Y-m-d', 'tglfaktur' => 'date:Y-m-d',
         'jumlahitem' => 'integer', 'subtotal' => 'decimal:2',
         'diskon' => 'decimal:2', 'pajak' => 'decimal:2', 'grandtotal' => 'decimal:2',
+        'dibayar' => 'decimal:2', 'sisa_hutang' => 'decimal:2',
         'stok_terkirim_at' => 'datetime',
         'flaging' => 'integer',
     ];

@@ -17,6 +17,11 @@ class ReturPenjualanService
     {
         return DB::transaction(function () use ($data, $userId) {
             $penjualan = Penjualan::lockForUpdate()->findOrFail($data['penjualan_id']);
+            if ($penjualan->setoran_bendahara_id !== null) {
+                throw ValidationException::withMessages([
+                    'penjualan' => 'Transaksi sudah disetor ke bendahara dan tidak dapat diretur',
+                ]);
+            }
             if ($penjualan->tanggal->lt(now()->subDays(3))) {
                 throw ValidationException::withMessages([
                     'penjualan' => 'Transaksi sudah melewati batas retur 3 hari',
